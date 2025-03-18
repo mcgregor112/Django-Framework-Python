@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Profile</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1D4ED8',
+                        secondary: '#9333EA',
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-gray-100">
+
+    <main class="container mx-auto mt-10">
+        <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Profile</h2>
+            
+            <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700">Username</p>
+                <p class="text-lg text-gray-900">{{ user.username }}</p>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700">Email</p>
+                <p class="text-lg text-gray-900">{{ user.email }}</p>
+            </div>
+
+            {% if student %}
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Student Details</h3>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Enrollment Number</p>
+                    <p class="text-lg text-gray-900">{{ student.enrollment_number }}</p>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Department</p>
+                    <p class="text-lg text-gray-900">{{ student.department }}</p>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Year</p>
+                    <p class="text-lg text-gray-900">{{ student.year }}</p>
+                </div>
+            {% elif teacher %}
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Teacher Details</h3>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Employee ID</p>
+                    <p class="text-lg text-gray-900">{{ teacher.employee_id }}</p>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Subject</p>
+                    <p class="text-lg text-gray-900">{{ teacher.subject }}</p>
+                </div>
+            {% endif %}
+
+            <!-- Buttons section with flex for side by side -->
+            <div class="flex space-x-4">
+                <a href="{% url 'update_profile' %}" 
+                   class="w-full text-center bg-blue-500 text-white py-2 px-4 rounded-md shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Update Profile
+                </a>
+
+                <a href=" {% url 'delete_profile' %} "
+                   class="w-full text-center bg-red-500 text-white py-2 px-4 rounded-md shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Delete Profile
+                </a>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

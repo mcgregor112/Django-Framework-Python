@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="grid grid-cols-2 gap-6">
+    <!-- Students Card -->
+    <div class="bg-blue-500 text-white rounded-lg shadow-md p-6">
+        <h5 class="text-2xl font-bold">{{ student_count }} students </h5>
+    </div>
+    <!-- Teachers Card -->
+    <div class="bg-yellow-500 text-white rounded-lg shadow-md p-6">
+        <h5 class="text-2xl font-bold">{{ teacher_count }} teachers </h5>
+    </div>
+    <!-- Clubs Card -->
+    <div class="bg-green-500 text-white rounded-lg shadow-md p-6">
+        <h5 class="text-2xl font-bold">5 Clubs</h5>
+    </div>
+    <!-- Books Card -->
+    <div class="bg-red-500 text-white rounded-lg shadow-md p-6">
+        <h5 class="text-2xl font-bold">{{ book_count }} books</h5>
+    </div>
+</div>
+
+<div class="mt-6 bg-white shadow-md rounded-lg p-6">
+    <h5 class="text-lg font-bold">DPI-Event-101</h5>
+    <p>Washington DC | Marcius Park</p>
+</div>
+
+<div class="grid grid-cols-2 gap-6 mt-6">
+    <!-- No Meeting Scheduled -->
+    <div class="bg-gray-200 rounded-lg p-6 shadow-md">
+        <h5 class="text-lg font-bold">No meeting scheduled</h5>
+    </div>
+    <!-- To-Do List -->
+    <div class="bg-black text-white rounded-lg p-6 shadow-md">
+        <h5 class="text-lg font-bold">To-Do List</h5>
+    </div>
+</div>
+{% endblock %}
