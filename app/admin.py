@@ -1,33 +1,19 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser , Book
+from .models import User
 
-@admin.register(CustomUser)
-class CustomUserAdmin(UserAdmin):
-    # Specify fields to display in the list view
-    list_display = ('username', 'email', 'role', 'is_staff', 'is_active')
+class UserAdmin(admin.ModelAdmin):
+    model = User
+    list_display = ['username', 'email', 'role', 'is_staff', 'is_active']
+    search_fields = ['username', 'email']
+    list_filter = ['role', 'is_staff', 'is_active']
 
-    # Specify fields for filtering in the admin
-    list_filter = ('role', 'is_staff', 'is_active')
-
-    # Specify which fields can be edited in the admin form
-    fieldsets = UserAdmin.fieldsets + (
-        ('Additional Info', {'fields': ('role',)}),
+    # Removing filter_horizontal and fieldsets for groups and user_permissions
+    fieldsets = (
+        (None, {'fields': ('username', 'email', 'password', 'role', 'is_staff', 'is_active')}),
     )
 
-    # Specify fields for add user form
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Additional Info', {'fields': ('role',)}),
+    add_fieldsets = (
+        (None, {'fields': ('username', 'email', 'password', 'role', 'is_staff', 'is_active')}),
     )
 
-class BookAdmin(admin.ModelAdmin):
-    # Fields to display in the list view
-    list_display = ('title', 'author')
-    
-    # Add search functionality to search by title or author
-    search_fields = ('title', 'author')
-    
-    # Add ordering to make the list sorted by title by default
-    ordering = ('title',)
-    
-admin.site.register(Book, BookAdmin)
+admin.site.register(User, UserAdmin)

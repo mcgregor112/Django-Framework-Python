@@ -1,37 +1,30 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from .models import Student, Teacher, Book
-from django.core.exceptions import MultipleObjectsReturned
+from .models import Student, Teacher, Book, User
 from functools import wraps
-
 
 def login_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if 'manager_id' in request.session:
+        if 'user_id' in request.session:
             return view_func(request, *args, **kwargs)
         else:
             messages.error(request, 'You are not logged in. Please log in to access the dashboard.')
             return redirect('login')
     return wrapper
 
-
 def dashboard_view(request):
-    
     student_count = Student.objects.count()
     teacher_count = Teacher.objects.count()
-    book_count = Book.objects.count()  
+    book_count = Book.objects.count()
 
     context = {
         'student_count': student_count,
         'teacher_count': teacher_count,
-        'book_count': book_count,  
+        'book_count': book_count,
     }
 
     return render(request, 'dashboard.html', context)
-
 
 def register_view(request):
     if request.method == 'POST':
@@ -39,27 +32,26 @@ def register_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
-        role = request.POST.get('role', 'student')  
+        role = request.POST.get('role', 'student')
 
-        User = get_user_model()
         if User.objects.filter(email=email).exists():
             messages.error(request, 'Email already registered.')
         elif password != confirm_password:
             messages.error(request, 'Passwords do not match.')
         else:
             try:
-                user = User.objects.create_user(username=username, email=email, password=password)
+                user = User.objects.create_user(username=username, email=email, password=password, role=role)
 
                 if role == 'student':
                     Student.objects.create(
-                        user=user, 
+                        user=user,
                         enrollment_number=request.POST.get('enrollment_number'),
                         department=request.POST.get('department'),
                         year=request.POST.get('year')
                     )
                 elif role == 'teacher':
                     Teacher.objects.create(
-                        user=user, 
+                        user=user,
                         employee_id=request.POST.get('employee_id'),
                         subject=request.POST.get('subject')
                     )
@@ -74,47 +66,43 @@ def register_view(request):
 
     return render(request, 'register.html')
 
-
 def login_view(request):
     email = None
     password = None
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
-    try:
-        
-        user = authenticate(request, username=email, password=password)
 
-        if user is not None:
-            login(request, user)
+    try:
+        user = User.objects.get(email=email)
+
+        if user.check_password(password):
+            request.session['user_id'] = user.id
             messages.success(request, 'Login successful!')
             return redirect('dashboard_view')
         else:
             messages.error(request, 'Invalid email or password.')
 
-    except MultipleObjectsReturned:
-            messages.error(request, 'Multiple accounts found with this email. Contact support.')        
+    except User.DoesNotExist:
+        messages.error(request, 'User with this email does not exist.')
 
     return render(request, 'login.html')
 
-
-
-# Forgot Password View
+# forgot_password view :
 def forgot_password_view(request):
     
     return render(request, 'forgot_password.html')
 
+# profile_view :
 @login_required
 def profile_view(request):
-    """View to display the profile details."""
     user = request.user
     student = None
     teacher = None
 
-    
-    if hasattr(user, 'student_profile'):  
+    if hasattr(user, 'student_profile'):
         student = user.student_profile
-    elif hasattr(user, 'teacher_profile'):  
+    elif hasattr(user, 'teacher_profile'):
         teacher = user.teacher_profile
 
     context = {
@@ -168,7 +156,8 @@ def update_profile(request):
     return render(request, 'update_profile.html', {'user': user, 'student': student, 'teacher': teacher})
 
 def logout_view(request):
-    logout(request)
+    if 'user_id' in request.session:
+        del request.session['user_id']
     return redirect('login_view')
 
 @login_required
