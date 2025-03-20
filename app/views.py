@@ -4,7 +4,19 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from .models import Student, Teacher, Book
 from django.core.exceptions import MultipleObjectsReturned
-from django.contrib.auth.decorators import login_required
+from functools import wraps
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if 'manager_id' in request.session:
+            return view_func(request, *args, **kwargs)
+        else:
+            messages.error(request, 'You are not logged in. Please log in to access the dashboard.')
+            return redirect('login')
+    return wrapper
+
 
 def dashboard_view(request):
     
@@ -20,6 +32,7 @@ def dashboard_view(request):
 
     return render(request, 'dashboard.html', context)
 
+
 def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -27,38 +40,37 @@ def register_view(request):
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
         role = request.POST.get('role', 'student')  
-        is_active = request.POST.get('is_active', 'True') == 'True'
-        is_staff = request.POST.get('is_staff', 'False') == 'True'
 
         User = get_user_model()
-
         if User.objects.filter(email=email).exists():
-            messages.error(request, 'Email is already registered.')
-            return redirect('register_view')
-
-        if password != confirm_password:
+            messages.error(request, 'Email already registered.')
+        elif password != confirm_password:
             messages.error(request, 'Passwords do not match.')
-            return redirect('register_view')
+        else:
+            try:
+                user = User.objects.create_user(username=username, email=email, password=password)
 
-        try:
-            user = User.objects.create_user(username=username, email=email, password=password, role=role, is_active=is_active, is_staff=is_staff)
+                if role == 'student':
+                    Student.objects.create(
+                        user=user, 
+                        enrollment_number=request.POST.get('enrollment_number'),
+                        department=request.POST.get('department'),
+                        year=request.POST.get('year')
+                    )
+                elif role == 'teacher':
+                    Teacher.objects.create(
+                        user=user, 
+                        employee_id=request.POST.get('employee_id'),
+                        subject=request.POST.get('subject')
+                    )
 
-            
-            if role == 'student':
-                enrollment_number = request.POST.get('enrollment_number')
-                department = request.POST.get('department')
-                year = request.POST.get('year')
-                Student.objects.create(user=user, enrollment_number=enrollment_number, department=department, year=year)
-            elif role == 'teacher':
-                employee_id = request.POST.get('employee_id')
-                subject = request.POST.get('subject')
-                Teacher.objects.create(user=user, employee_id=employee_id, subject=subject)
+                messages.success(request, 'Registration successful! Please log in.')
+                return redirect('login_view')
 
-            messages.success(request, 'Registration successful! Please log in.')
-            return redirect('login_view')
-        except Exception as e:
-            messages.error(request, f'Error during registration: {e}')
-            return redirect('register_view')
+            except Exception as e:
+                messages.error(request, f'Error during registration: {e}')
+
+        return redirect('register_view')
 
     return render(request, 'register.html')
 
@@ -85,12 +97,7 @@ def login_view(request):
 
     return render(request, 'login.html')
 
-# Logout View
-# def logout_view(request):
-#     if request.user.is_authenticated:
-#         logout(request)
-#         messages.success(request, 'You have been logged out.')
-#     return redirect('login_view')
+
 
 # Forgot Password View
 def forgot_password_view(request):
@@ -124,44 +131,45 @@ def update_profile(request):
     student = None
     teacher = None
 
-    if hasattr(user, 'student_profile'):  
+    try:
         student = user.student_profile
-    elif hasattr(user, 'teacher_profile'):  
+    except Student.DoesNotExist:
+        pass
+
+    try:
         teacher = user.teacher_profile
+    except Teacher.DoesNotExist:
+        pass
 
-    if request.method == "POST":
-        
-        user.username = request.POST.get('username')
-        user.email = request.POST.get('email')
-        user.save()
+    if request.method == 'POST':
+        user.username = request.POST.get('username', user.username)
+        user.email = request.POST.get('email', user.email)
 
-        if student:
-            student.enrollment_number = request.POST.get('enrollment_number')
-            student.department = request.POST.get('department')
-            student.year = request.POST.get('year')
-            student.save()
+        try:
+            user.save()
 
-       
-        elif teacher:
-            teacher.employee_id = request.POST.get('employee_id')
-            teacher.subject = request.POST.get('subject')
-            teacher.save()
+            if student:
+                student.enrollment_number = request.POST.get('enrollment_number', student.enrollment_number)
+                student.department = request.POST.get('department', student.department)
+                student.year = request.POST.get('year', student.year)
+                student.save()
 
-        messages.success(request, "Profile updated successfully!")
-        return redirect('profile_view')
+            elif teacher:
+                teacher.employee_id = request.POST.get('employee_id', teacher.employee_id)
+                teacher.subject = request.POST.get('subject', teacher.subject)
+                teacher.save()
 
-    context = {
-        'user': user,
-        'student': student,
-        'teacher': teacher,
-    }
-    return render(request, 'update_profile.html', context)
+            messages.success(request, "Profile updated successfully!")
+            return redirect('profile_view')
+
+        except Exception as e:
+            messages.error(request, f"Error updating profile: {str(e)}")
+
+    return render(request, 'update_profile.html', {'user': user, 'student': student, 'teacher': teacher})
 
 def logout_view(request):
-    """Logout the user and redirect to the home page."""
     logout(request)
     return redirect('login_view')
-
 
 @login_required
 def delete_profile(request):
@@ -169,14 +177,17 @@ def delete_profile(request):
     student = None
     teacher = None
 
-    
-    if hasattr(user, 'student_profile'):  
+    try:
         student = user.student_profile
-    elif hasattr(user, 'teacher_profile'):  
+    except Student.DoesNotExist:
+        pass
+
+    try:
         teacher = user.teacher_profile
+    except Teacher.DoesNotExist:
+        pass
 
     if request.method == "POST":
-        
         if student:
             student.delete()
         elif teacher:
@@ -185,14 +196,6 @@ def delete_profile(request):
         user.delete()
 
         messages.success(request, "Your profile has been deleted successfully.")
-        return redirect('login_view') 
+        return redirect('login_view')
 
     return render(request, 'delete_profile_confirmation.html', {'user': user})
-
-def library_view(request):
-    books = Book.objects.all()  
-    return render(request, 'library.html', {'books': books})
-
-def student_view(request):
-    student = Student.objects.all()
-    return render(request, 'student.html', {'student' : student})
